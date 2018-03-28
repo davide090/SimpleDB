@@ -187,9 +187,8 @@ public class FileMgr {
 				this.blockStatsFile.put(filename, new BasicFileStats());
 				//				System.out.println(" inserita chiave " + filename + "  per le statistiche");
 			}
-			
-			f.close();
 		}
+
 		return fc;
 	}
 
