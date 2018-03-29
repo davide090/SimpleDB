@@ -1,8 +1,13 @@
 package simpledb.materialize;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+
+import javax.xml.soap.SAAJResult;
 
 import simpledb.query.Constant;
 import simpledb.query.UpdateScan;
@@ -28,7 +33,7 @@ public class NWaysSortScan {
 		//			hasmore2 = s2.next();
 		//		}
 
-		Integer i = 1;
+		Integer i = 0;
 		for(TempTable t : runs) {
 			scans.put(i,t.open());
 			i++;
@@ -80,17 +85,59 @@ public class NWaysSortScan {
 		//			currentscan = s2;
 		//		return true;
 
-		boolean empty =  true;
 
-		while(empty) {
-			for(UpdateScan s : scans.values())
-				if(s.next() != false)
-					empty = false;
+		List<Boolean> bol = new ArrayList<>();
+
+		for(Integer i : scans.keySet()) {
+			bol.add(bolnext(scans.get(i)));
 		}
 
+		if(bol.stream().allMatch(i->i==false))
+			return false;
+		else if(bol.stream().filter(i->i==true).count() > 1){
+
+			List<UpdateScan> tmp = new ArrayList<>();
+			for(UpdateScan s : scans.values()) {
+				if(bolnext(s))
+					tmp.add(s);
+			}
+			currentscan = lessScan(tmp);
+		}
+		else if(bol.stream().filter(i->i==true).count() == 1) {
+
+			for(UpdateScan s : scans.values()) {
+				if(bolnext(s))
+					currentscan = s;
+			}
+		}
+		//		
+		//		currentscan = lessScan(scans);
+		//		}
+		//		return true;
+
+
+		return true;
 
 	}
 
+
+
+	private UpdateScan lessScan(List<UpdateScan> tmp) {
+
+
+		UpdateScan s = tmp.stream().min(comp).orElseThrow(NoSuchElementException::new);
+
+		return s;
+	}
+
+
+	private boolean bolnext(UpdateScan updateScan) {
+
+		if(updateScan.next() == false)
+			return false;
+
+		return true;
+	}
 
 
 	public void close() {
@@ -141,6 +188,14 @@ public class NWaysSortScan {
 		//		RID rid1 = s1.getRid();
 		//		RID rid2 = (s2 == null) ? null : s2.getRid();
 		//		savedposition = Arrays.asList(rid1,rid2);
+
+		List<RID> r = new ArrayList<>();
+
+		for(UpdateScan s : scans.values()) {
+			r.add(s.getRid());
+		}
+
+		savedposition = r;
 	}
 
 	/**
@@ -154,5 +209,11 @@ public class NWaysSortScan {
 		//			s2.moveToRid(rid2);
 		//
 
+		Iterator<RID> r = savedposition.iterator();
+		Iterator<UpdateScan> s = scans.values().iterator();
+
+		while(r.hasNext() && s.hasNext()) {
+			s.next().moveToRid(r.next());
+		}
 	}
 }

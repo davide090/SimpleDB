@@ -1,9 +1,10 @@
 package simpledb.materialize;
 
 import simpledb.query.*;
-import simpledb.record.RID;
 
-import java.util.*;
+import simpledb.record.RID;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * A comparator for scans.
